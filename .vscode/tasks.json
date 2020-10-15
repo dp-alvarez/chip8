@@ -1,0 +1,23 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "run",
+			"type": "shell",
+			"command": "python3 src/main.py",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false
+			},
+			"options": {
+				"env": {
+					"PYGAME_HIDE_SUPPORT_PROMPT": "hide"
+				}
+			},
+			"problemMatcher": []
+		}
+	]
+}
