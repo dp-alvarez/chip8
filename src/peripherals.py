@@ -50,9 +50,7 @@ class Delay:
 		return self.data
 
 	def tick(self, time):
-		if self.last_update is None:
-			self.last_update = time
-		elif time-self.last_update >= self.freq:
+		if self.last_update is None or time-self.last_update >= self.freq:
 			if self.data > 0:
 				self.data -= 1
 			self.last_update = time

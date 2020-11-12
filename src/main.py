@@ -1,4 +1,5 @@
 import itertools
+import time
 from dataclasses import dataclass, field
 from typing import Tuple
 import pygame as pyg
@@ -14,11 +15,13 @@ class Config:
 		ramsize: int = 4096
 		screen_size: Tuple[int,int] = (64, 32)
 		nkeys: int = 16
-		delay: int = 1000
+		delay: float = 1/60
+
 	system: System = field(default_factory=System)
 	screen_size: Tuple[int,int] = (768+1, 384+1)
 	screen_pos: Tuple[int,int] = (10, 10)
 	screen_bg: Colors = Colors.black
+	draw_interval: float = 1/60
 	draw_size: int = 12
 	draw_color: Colors = Colors.white
 	grid_color: Colors = Colors.gray
@@ -46,10 +49,18 @@ class Config:
 
 
 def draw():
+	# pylint: disable=used-before-assignment
+	global last_draw
+
+	if last_draw is not None and now-last_draw < config.draw_interval:
+		return
+	last_draw = now
+
 	pyg_screen.fill(config.screen_bg)
 	for x,y in itertools.product(range(config.system.screen_size[0]), range(config.system.screen_size[1])):
 		if screen[x,y]:
 			pyg.draw.rect(pyg_screen, config.draw_color, ((x*config.draw_size,y*config.draw_size), (config.draw_size,config.draw_size)), 0)
+
 	pyg_window.blit(pyg_screen, config.screen_pos)
 	pyg_window.blit(grid, config.screen_pos)
 	pyg.display.update()
@@ -57,9 +68,11 @@ def draw():
 
 def read_input():
 	global running
+
 	pressed = pyg.key.get_pressed()
 	for k,c in config.keymap.items():
 		keyboard[c] = bool(pressed[k])
+
 	for e in pyg.fastevent.get():
 		if e.type == pyg.QUIT:
 			running = False
@@ -71,6 +84,7 @@ def create_grid():
 	grid = pyg.surface.Surface(config.screen_size)
 	grid.set_colorkey(bg, pyg.RLEACCEL)
 	grid.fill(bg)
+
 	xend = config.draw_size * config.system.screen_size[0]
 	yend = config.draw_size * config.system.screen_size[1]
 	for i in range(config.system.screen_size[0]+1):
@@ -79,16 +93,19 @@ def create_grid():
 	for i in range(config.system.screen_size[1]+1):
 		y = i*config.draw_size
 		pyg.draw.line(grid, config.grid_color, (0,y), (xend,y), 1)
+
 	return grid
 
 
 def main():
-	global config, running
+	global config, running, now, last_draw
 	config = Config()
 	running = True
+	now = 0
+	last_draw = None
 
 	global pyg_window, pyg_screen, grid
-	pyg.init()
+	pyg.display.init()
 	pyg.fastevent.init()
 	pyg_window = pyg.display.set_mode(config.window_size)
 	pyg.display.set_caption(config.caption)
@@ -101,11 +118,12 @@ def main():
 	screen = Screen(config.system.screen_size)
 	keyboard = Keyboard(config.system.nkeys)
 	cpu = Cpu(mem, delay, screen, keyboard)
-	with open("roms/octo_demo/compiled.ch8", 'rb') as f:
+	with open("roms/octo_demo/compiled_slow.ch8", 'rb') as f:
 		f.readinto(cpu.mem[cpu.ip:])
 
 	while running:
-		cpu.delay.set(0)
+		now = time.perf_counter()
+		delay.tick(now)
 		cpu.tick()
 		draw()
 		read_input()

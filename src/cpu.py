@@ -13,17 +13,21 @@ class Cpu:
 		self.i = 0
 		self.init_opcode_handlers()
 
+
 	def init_opcode_handlers(self):
 		# pylint: disable=assignment-from-no-return
 		self.opcode_handlers = dict()
 		for regex,opcode in Cpu.opcode_handlers.items():
 			self.opcode_handlers[re.compile(regex)] = opcode.__get__(self, self.__class__)
 
+
 	def opcode_lookup(self, opcode_str):
 		for regex in self.opcode_handlers:
 			if regex.fullmatch(opcode_str):
 				return self.opcode_handlers[regex]
+
 		raise EmulationError(f"No handler for opcode: {opcode_str}")
+
 
 	def tick(self):
 		self.opc = self.mem[self.ip:self.ip+self.opcode_size]
@@ -31,34 +35,41 @@ class Cpu:
 		self.opc = tuple(Byte(b) for b in self.opc)
 
 		opcode = self.opcode_lookup(opcode_str)
-		opcode()
-		self.ip += self.opcode_size
+		try:
+			opcode()
+		except EmulationError:
+			raise
+		except Exception as e:
+			raise EmulationError(e) from e
 
-		print(opcode_str)
-		print([hex(x) for x in self.v])
-		print(hex(self.i))
-		print(self.delay)
-		print(hex(self.ip))
-		print()
+		# print(opcode_str)
+		# print([hex(x) for x in self.v])
+		# print(hex(self.i))
+		# print(self.delay)
+		# print(hex(self.ip))
+		# print()
 
 
 	def opcode_1nnn(self):
 		self.ip = (self.opc[0][0] << 8) + self.opc[1]
-		self.ip -= self.opcode_size
 
 	def opcode_3xnn(self):
 		if self.v[self.opc[0][0]] == self.opc[1]:
 			self.ip += self.opcode_size
+		self.ip += self.opcode_size
 
 	def opcode_6xnn(self):
 		self.v[self.opc[0][0]] = self.opc[1]
+		self.ip += self.opcode_size
 
 	def opcode_7xnn(self):
 		n = self.v[self.opc[0][0]] + self.opc[1]
 		self.v[self.opc[0][0]] = n % 256
+		self.ip += self.opcode_size
 
 	def opcode_annn(self):
 		self.i = (self.opc[0][0] << 8) + self.opc[1]
+		self.ip += self.opcode_size
 
 	def opcode_dxyn(self):
 		y = self.v[self.opc[1][1]]
@@ -73,16 +84,20 @@ class Cpu:
 				x += 1
 			y += 1
 			addr += 1
+		self.ip += self.opcode_size
 
 	def opcode_exa1(self):
 		if not self.keyboard[self.v[self.opc[0][0]]]:
 			self.ip += self.opcode_size
+		self.ip += self.opcode_size
 
 	def opcode_fx07(self):
 		self.v[self.opc[0][0]] = self.delay.get()
+		self.ip += self.opcode_size
 
 	def opcode_fx15(self):
 		self.delay.set(self.v[self.opc[0][0]])
+		self.ip += self.opcode_size
 
 
 Cpu.opcode_handlers = {
