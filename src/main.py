@@ -16,8 +16,10 @@ class Config:
 		screen_size: Tuple[int,int] = (64, 32)
 		nkeys: int = 16
 		delay: float = 1/60
+		speed: float = 1/1000000
 
 	system: System = field(default_factory=System)
+	busy_amount: float = 1/10
 	screen_size: Tuple[int,int] = (768+1, 384+1)
 	screen_pos: Tuple[int,int] = (10, 10)
 	screen_bg: Colors = Colors.black
@@ -98,11 +100,12 @@ def create_grid():
 
 
 def main():
-	global config, running, now, last_draw
+	global config, running, now, last_draw, last_update
 	config = Config()
 	running = True
 	now = 0
 	last_draw = None
+	last_update = None
 
 	global pyg_window, pyg_screen, grid
 	pyg.display.init()
@@ -118,15 +121,21 @@ def main():
 	screen = Screen(config.system.screen_size)
 	keyboard = Keyboard(config.system.nkeys)
 	cpu = Cpu(mem, delay, screen, keyboard)
-	with open("roms/octo_demo/compiled_slow.ch8", 'rb') as f:
+	with open("roms/octo_demo/compiled.ch8", 'rb') as f:
 		f.readinto(cpu.mem[cpu.ip:])
 
+	last_update = time.perf_counter()
 	while running:
 		now = time.perf_counter()
-		delay.tick(now)
-		cpu.tick()
-		draw()
-		read_input()
+		tosleep = config.busy_amount * (config.system.speed - (now-last_update))
+		if tosleep >= 0:
+			time.sleep(tosleep)
+		else:
+			last_update = now
+			read_input()
+			delay.tick(now)
+			cpu.tick()
+			draw()
 
 	pyg.quit()
 
