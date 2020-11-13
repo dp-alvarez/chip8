@@ -51,10 +51,10 @@ class Cpu:
 
 
 	def opcode_1nnn(self):
-		self.ip = (self.opc[0][0] << 8) + self.opc[1]
+		self.ip = self.opc[1] + (self.opc[0][0] << 8)
 
 	def opcode_3xnn(self):
-		if self.v[self.opc[0][0]] == self.opc[1]:
+		if not self.v[self.opc[0][0]] != self.opc[1]:
 			self.ip += self.opcode_size
 		self.ip += self.opcode_size
 
@@ -72,18 +72,18 @@ class Cpu:
 		self.ip += self.opcode_size
 
 	def opcode_dxyn(self):
-		y = self.v[self.opc[1][1]]
+		self.v[15] = 0
 		addr = self.i
+		y = self.v[self.opc[1][1]] % self.screen.shape[1]
 		for _ in range(self.opc[1][0]):
-			x = self.v[self.opc[0][0]]
-			for xx in range(8):
-				b = bin(self.mem[addr])[2:]
-				b = '0' * (8 - len(b)) + b
-				b = b[xx] == '1'
-				self.screen[x,y] = self.screen[x,y] ^ b
-				x += 1
-			y += 1
+			x = self.v[self.opc[0][0]] % self.screen.shape[0]
+			for b in bin(self.mem[addr])[2:].rjust(8, '0'):
+				b = self.screen[x,y] ^ int(b)
+				self.screen[x,y] = b
+				self.v[15] = self.v[15] | b
+				x = (x+1) % self.screen.shape[0]
 			addr += 1
+			y = (y+1) % self.screen.shape[1]
 		self.ip += self.opcode_size
 
 	def opcode_exa1(self):
