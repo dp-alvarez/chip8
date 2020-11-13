@@ -3,7 +3,8 @@ import collections.abc
 
 class Memory:
 	def __new__(cls, size):
-		return memoryview(bytearray(size))
+		ret = memoryview(bytearray(size))
+		return ret
 
 
 class Screen:

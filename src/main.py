@@ -19,6 +19,7 @@ class Config:
 		speed: float = 1/1000000
 
 	system: System = field(default_factory=System)
+	romfile: str = "roms/keyboard_test.ch8"
 	busy_amount: float = 1/10
 	screen_size: Tuple[int,int] = (768+1, 384+1)
 	screen_pos: Tuple[int,int] = (10, 10)
@@ -72,8 +73,8 @@ def read_input():
 	global running
 
 	pressed = pyg.key.get_pressed()
-	for k,c in config.keymap.items():
-		keyboard[c] = bool(pressed[k])
+	for key,code in config.keymap.items():
+		keyboard[code] = bool(pressed[key])
 
 	for e in pyg.fastevent.get():
 		if e.type == pyg.QUIT:
@@ -121,7 +122,7 @@ def main():
 	screen = Screen(config.system.screen_size)
 	keyboard = Keyboard(config.system.nkeys)
 	cpu = Cpu(mem, delay, screen, keyboard)
-	with open("roms/octo_demo/compiled.ch8", 'rb') as f:
+	with open(config.romfile, 'rb') as f:
 		f.readinto(cpu.mem[cpu.ip:])
 
 	last_update = time.perf_counter()
