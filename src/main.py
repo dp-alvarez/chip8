@@ -19,7 +19,9 @@ class Config:
 		speed: float = 1/1000000
 
 	system: System = field(default_factory=System)
-	romfile: str = "roms/keyboard_test.ch8"
+	romfile: str = "roms/octo_examples/outlaw.ch8"
+	# romfile: str = "roms/octo_examples/keyboard.ch8"
+	# romfile: str = "roms/octo_examples/default/compiled.ch8"
 	busy_amount: float = 1/10
 	screen_size: Tuple[int,int] = (768+1, 384+1)
 	screen_pos: Tuple[int,int] = (10, 10)
@@ -60,7 +62,7 @@ def draw():
 	last_draw = now
 
 	pyg_screen.fill(config.screen_bg)
-	for x,y in itertools.product(range(config.system.screen_size[0]), range(config.system.screen_size[1])):
+	for x,y in screen:
 		if screen[x,y]:
 			pyg.draw.rect(pyg_screen, config.draw_color, ((x*config.draw_size,y*config.draw_size), (config.draw_size,config.draw_size)), 0)
 

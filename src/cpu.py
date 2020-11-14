@@ -8,6 +8,7 @@ class Cpu:
 		self.delay = delay
 		self.screen = screen
 		self.keyboard = keyboard
+		self.stack = []
 		self.ip = 0x200
 		self.v = [0] * 16
 		self.i = 0
@@ -53,7 +54,20 @@ class Cpu:
 			raise EmulationError(repr(e)) from e
 
 
+	def opcode_00e0(self):
+		for x,y in self.screen:
+			self.screen[x,y] = False
+		self.ip += self.opc.size
+
+	def opcode_00ee(self):
+		self.ip = self.stack.pop()
+		self.ip += self.opc.size
+
 	def opcode_1nnn(self):
+		self.ip = self.opc[1:4]
+
+	def opcode_2nnn(self):
+		self.stack.append(self.ip)
 		self.ip = self.opc[1:4]
 
 	def opcode_3xnn(self):
@@ -66,6 +80,11 @@ class Cpu:
 			self.ip += self.opc.size
 		self.ip += self.opc.size
 
+	def opcode_5xy0(self):
+		if not self.v[self.opc[1]] != self.v[self.opc[2]]:
+			self.ip += self.opc.size
+		self.ip += self.opc.size
+
 	def opcode_6xnn(self):
 		self.v[self.opc[1]] = self.opc[2:4]
 		self.ip += self.opc.size
@@ -73,6 +92,10 @@ class Cpu:
 	def opcode_7xnn(self):
 		n = self.v[self.opc[1]] + self.opc[2:4]
 		self.v[self.opc[1]] = n % 256
+		self.ip += self.opc.size
+
+	def opcode_8xy0(self):
+		self.v[self.opc[1]] = self.v[self.opc[2]]
 		self.ip += self.opc.size
 
 	def opcode_annn(self):
@@ -112,6 +135,10 @@ class Cpu:
 		self.delay.set(self.v[self.opc[1]])
 		self.ip += self.opc.size
 
+	def opcode_fx18(self):
+		# @todo buzzer instruction
+		self.ip += self.opc.size
+
 	def opcode_fx29(self):
 		char = self.v[self.opc[1]]
 		self.i = self.char_pos[char]
@@ -135,17 +162,23 @@ class Cpu:
 
 
 Cpu.opcode_handlers = {
+	'00e0': Cpu.opcode_00e0,
+	'00ee': Cpu.opcode_00ee,
 	'1...': Cpu.opcode_1nnn,
+	'2...': Cpu.opcode_2nnn,
 	'3...': Cpu.opcode_3xnn,
 	'4...': Cpu.opcode_4xnn,
+	'5..0': Cpu.opcode_5xy0,
 	'6...': Cpu.opcode_6xnn,
 	'7...': Cpu.opcode_7xnn,
+	'8..0': Cpu.opcode_8xy0,
 	'a...': Cpu.opcode_annn,
 	'd...': Cpu.opcode_dxyn,
 	'e.9e': Cpu.opcode_ex9e,
 	'e..1': Cpu.opcode_exa1,
 	'f.07': Cpu.opcode_fx07,
 	'f.15': Cpu.opcode_fx15,
+	'f.18': Cpu.opcode_fx18,
 	'f.29': Cpu.opcode_fx29,
 	'f.1e': Cpu.opcode_fx1e,
 	'f.55': Cpu.opcode_fx55,

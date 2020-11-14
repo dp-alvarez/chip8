@@ -1,3 +1,4 @@
+import itertools
 import collections.abc
 
 
@@ -17,6 +18,9 @@ class Screen:
 
 	def __setitem__(self, index, value):
 		self.data[index[1]][index[0]] = bool(value)
+
+	def __iter__(self):
+		return itertools.product(range(self.shape[0]), range(self.shape[1]))
 
 
 class Keyboard(collections.abc.Mapping):
