@@ -1,13 +1,13 @@
-import math
 import re
 
 
 class Cpu:
-	def __init__(self, mem, delay, screen, keyboard):
+	def __init__(self, mem, delay, screen, keyboard, random):
 		self.mem = mem
 		self.delay = delay
 		self.screen = screen
 		self.keyboard = keyboard
+		self.random = random
 		self.stack = []
 		self.ip = 0x200
 		self.v = [0] * 16
@@ -102,6 +102,13 @@ class Cpu:
 		self.i = self.opc[1:4]
 		self.ip += self.opc.size
 
+	def opcode_bnnn(self):
+		self.ip = self.v[0] + self.opc[1:4]
+
+	def opcode_cxnn(self):
+		self.v[self.opc[1]] = self.random.randrange(256) & self.opc[2:4]
+		self.ip += self.opc.size
+
 	def opcode_dxyn(self):
 		self.v[15] = 0
 		addr = self.i
@@ -109,9 +116,9 @@ class Cpu:
 		for _ in range(self.opc[3]):
 			x = self.v[self.opc[1]] % self.screen.shape[0]
 			for b in bin(self.mem[addr])[2:].rjust(8, '0'):
-				b = self.screen[x,y] ^ int(b)
-				self.screen[x,y] = b
-				self.v[15] = self.v[15] | b
+				b = bool(int(b))
+				self.v[15] = self.v[15] or (self.screen[x,y] and b)
+				self.screen[x,y] = self.screen[x,y] ^ b
 				x = (x+1) % self.screen.shape[0]
 			addr += 1
 			y = (y+1) % self.screen.shape[1]
@@ -173,9 +180,11 @@ Cpu.opcode_handlers = {
 	'7...': Cpu.opcode_7xnn,
 	'8..0': Cpu.opcode_8xy0,
 	'a...': Cpu.opcode_annn,
+	'b...': Cpu.opcode_bnnn,
+	'c...': Cpu.opcode_cxnn,
 	'd...': Cpu.opcode_dxyn,
 	'e.9e': Cpu.opcode_ex9e,
-	'e..1': Cpu.opcode_exa1,
+	'e.a1': Cpu.opcode_exa1,
 	'f.07': Cpu.opcode_fx07,
 	'f.15': Cpu.opcode_fx15,
 	'f.18': Cpu.opcode_fx18,

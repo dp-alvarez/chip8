@@ -1,5 +1,6 @@
 import itertools
 import time
+import random
 from dataclasses import dataclass, field
 from typing import Tuple
 import pygame as pyg
@@ -12,11 +13,12 @@ from peripherals import *
 class Config:
 	@dataclass
 	class System:
+		seed: int = 0
 		ramsize: int = 4096
 		screen_size: Tuple[int,int] = (64, 32)
 		nkeys: int = 16
 		delay: float = 1/60
-		speed: float = 1/1000000
+		speed: float = 1/(60*30)
 
 	system: System = field(default_factory=System)
 	romfile: str = "roms/octo_examples/outlaw.ch8"
@@ -118,12 +120,13 @@ def main():
 	pyg_screen = pyg.surface.Surface(config.screen_size)
 	grid = create_grid()
 
-	global cpu, mem, delay, screen, keyboard
+	global cpu, mem, delay, screen, keyboard, random
 	mem = Memory(config.system.ramsize)
 	delay = Delay(config.system.delay)
 	screen = Screen(config.system.screen_size)
 	keyboard = Keyboard(config.system.nkeys)
-	cpu = Cpu(mem, delay, screen, keyboard)
+	random = random.Random(config.system.seed)
+	cpu = Cpu(mem, delay, screen, keyboard, random)
 	with open(config.romfile, 'rb') as f:
 		f.readinto(cpu.mem[cpu.ip:])
 
