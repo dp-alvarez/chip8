@@ -1,3 +1,4 @@
+import math
 import re
 
 
@@ -7,7 +8,6 @@ class Cpu:
 		self.delay = delay
 		self.screen = screen
 		self.keyboard = keyboard
-		self.opcode_size = 2 # @todo transformar em referencia para opcode
 		self.ip = 0x200
 		self.v = [0] * 16
 		self.i = 0
@@ -42,51 +42,49 @@ class Cpu:
 
 
 	def tick(self):
-		self.opc = self.mem[self.ip:self.ip+self.opcode_size]
-		opcode_str = self.opc.hex()
-		self.opc = tuple(Byte(b) for b in self.opc)
+		self.opc = Opcode(self.mem[self.ip:])
+		opcode = self.opcode_lookup(self.opc.hex())
 
-		opcode = self.opcode_lookup(opcode_str)
 		try:
 			opcode()
 		except EmulationError:
 			raise
 		except Exception as e:
-			raise EmulationError(e) from e
+			raise EmulationError(repr(e)) from e
 
 
 	def opcode_1nnn(self):
-		self.ip = self.opc[1] + (self.opc[0][0] << 8)
+		self.ip = self.opc[1:4]
 
 	def opcode_3xnn(self):
-		if not self.v[self.opc[0][0]] != self.opc[1]:
-			self.ip += self.opcode_size
-		self.ip += self.opcode_size
+		if not self.v[self.opc[1]] != self.opc[2:4]:
+			self.ip += self.opc.size
+		self.ip += self.opc.size
 
 	def opcode_4xnn(self):
-		if not self.v[self.opc[0][0]] == self.opc[1]:
-			self.ip += self.opcode_size
-		self.ip += self.opcode_size
+		if not self.v[self.opc[1]] == self.opc[2:4]:
+			self.ip += self.opc.size
+		self.ip += self.opc.size
 
 	def opcode_6xnn(self):
-		self.v[self.opc[0][0]] = self.opc[1]
-		self.ip += self.opcode_size
+		self.v[self.opc[1]] = self.opc[2:4]
+		self.ip += self.opc.size
 
 	def opcode_7xnn(self):
-		n = self.v[self.opc[0][0]] + self.opc[1]
-		self.v[self.opc[0][0]] = n % 256
-		self.ip += self.opcode_size
+		n = self.v[self.opc[1]] + self.opc[2:4]
+		self.v[self.opc[1]] = n % 256
+		self.ip += self.opc.size
 
 	def opcode_annn(self):
-		self.i = self.opc[1] + (self.opc[0][0] << 8)
-		self.ip += self.opcode_size
+		self.i = self.opc[1:4]
+		self.ip += self.opc.size
 
 	def opcode_dxyn(self):
 		self.v[15] = 0
 		addr = self.i
-		y = self.v[self.opc[1][1]] % self.screen.shape[1]
-		for _ in range(self.opc[1][0]):
-			x = self.v[self.opc[0][0]] % self.screen.shape[0]
+		y = self.v[self.opc[2]] % self.screen.shape[1]
+		for _ in range(self.opc[3]):
+			x = self.v[self.opc[1]] % self.screen.shape[0]
 			for b in bin(self.mem[addr])[2:].rjust(8, '0'):
 				b = self.screen[x,y] ^ int(b)
 				self.screen[x,y] = b
@@ -94,46 +92,46 @@ class Cpu:
 				x = (x+1) % self.screen.shape[0]
 			addr += 1
 			y = (y+1) % self.screen.shape[1]
-		self.ip += self.opcode_size
+		self.ip += self.opc.size
 
 	def opcode_ex9e(self):
-		if self.keyboard[self.v[self.opc[0][0]]]:
-			self.ip += self.opcode_size
-		self.ip += self.opcode_size
+		if self.keyboard[self.v[self.opc[1]]]:
+			self.ip += self.opc.size
+		self.ip += self.opc.size
 
 	def opcode_exa1(self):
-		if not self.keyboard[self.v[self.opc[0][0]]]:
-			self.ip += self.opcode_size
-		self.ip += self.opcode_size
+		if not self.keyboard[self.v[self.opc[1]]]:
+			self.ip += self.opc.size
+		self.ip += self.opc.size
 
 	def opcode_fx07(self):
-		self.v[self.opc[0][0]] = self.delay.get()
-		self.ip += self.opcode_size
+		self.v[self.opc[1]] = self.delay.get()
+		self.ip += self.opc.size
 
 	def opcode_fx15(self):
-		self.delay.set(self.v[self.opc[0][0]])
-		self.ip += self.opcode_size
+		self.delay.set(self.v[self.opc[1]])
+		self.ip += self.opc.size
 
 	def opcode_fx29(self):
-		char = self.v[self.opc[0][0]]
+		char = self.v[self.opc[1]]
 		self.i = self.char_pos[char]
-		self.ip += self.opcode_size
+		self.ip += self.opc.size
 
 	def opcode_fx1e(self):
-		self.i = (self.i + self.v[self.opc[0][0]]) % len(self.mem)
-		self.ip += self.opcode_size
+		self.i = (self.i + self.v[self.opc[1]]) % len(self.mem)
+		self.ip += self.opc.size
 
 	def opcode_fx55(self):
-		for i in range(self.opc[0][0]+1):
+		for i in range(self.opc[1]+1):
 			self.mem[self.i] = self.v[i]
 			self.i = (self.i+1) % len(self.mem)
-		self.ip += self.opcode_size
+		self.ip += self.opc.size
 
 	def opcode_fx65(self):
-		for i in range(self.opc[0][0]+1):
+		for i in range(self.opc[1]+1):
 			self.v[i] = self.mem[self.i]
 			self.i = (self.i+1) % len(self.mem)
-		self.ip += self.opcode_size
+		self.ip += self.opc.size
 
 
 Cpu.opcode_handlers = {
@@ -179,19 +177,27 @@ class EmulationError(Exception):
 	pass
 
 
-# @todo transformar em opcode
-class Byte(int):
+class Opcode(bytes):
 	__slots__ = tuple()
+	size = 2
 
 	def __new__(cls, val):
-		if val < 0 or val > 255:
-			raise ValueError("Value out of byte range")
-		return super().__new__(cls, val)
+		return super().__new__(cls, val[0:cls.size])
 
 	def __getitem__(self, index):
-		if index == 0:
-			return self & 0xf
-		elif index == 1:
-			return self >> 4
+		if isinstance(index, slice):
+			start, stop, _ = index.indices(2*self.size)
+			ret = 0
+			for i,index in enumerate(reversed(range(start, stop))):
+				ret += self.nibble(index) << (4*i)
+			return ret
 		else:
-			raise IndexError("Nibble index must be 0 or 1")
+			return self.nibble(index)
+
+	def nibble(self, index):
+		byte, index = divmod(index, 2)
+		byte = super().__getitem__(byte)
+		if index == 0:
+			return byte >> 4
+		else:
+			return byte & 0xf
