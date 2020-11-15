@@ -18,16 +18,10 @@ class Config:
 		screen_size: Tuple[int,int] = (64, 32)
 		nkeys: int = 16
 		delay: float = 1/60
-		speed: float = 1/(60*10)
+		speed: float = 1/(60*100)
 
 	system: System = field(default_factory=System)
-	romfile: str = "roms/chip_games/vbrix.ch8"
-	# romfile: str = "roms/chip_games/breakout.ch8"
-	# romfile: str = "roms/chip_games/brix.ch8"
-	# romfile: str = "roms/chip_games/pong.ch8"
-	# romfile: str = "roms/octo_examples/outlaw.ch8"
-	# romfile: str = "roms/octo_examples/keyboard.ch8"
-	# romfile: str = "roms/octo_examples/default/compiled.ch8"
+	romfile: str = "roms/chip_games/brix.ch8"
 	busy_amount: float = 1/10
 	screen_size: Tuple[int,int] = (768+1, 384+1)
 	screen_pos: Tuple[int,int] = (10, 10)
