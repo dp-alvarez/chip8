@@ -21,7 +21,7 @@ class Config:
 		speed: float = 1/(60*30)
 
 	system: System = field(default_factory=System)
-	romfile: str = "roms/octo_examples/outlaw.ch8"
+	romfile: str = "roms/chip_games/pong.ch8"
 	# romfile: str = "roms/octo_examples/keyboard.ch8"
 	# romfile: str = "roms/octo_examples/default/compiled.ch8"
 	busy_amount: float = 1/10
