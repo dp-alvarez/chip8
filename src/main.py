@@ -21,7 +21,7 @@ class Config:
 		speed: float = 1/(60*100)
 
 	system: System = field(default_factory=System)
-	romfile: str = "roms/chip_games/brix.ch8"
+	romfile: str = "roms/chip_modern/glitchghost.ch8"
 	busy_amount: float = 1/10
 	screen_size: Tuple[int,int] = (768+1, 384+1)
 	screen_pos: Tuple[int,int] = (10, 10)
@@ -29,7 +29,7 @@ class Config:
 	draw_interval: float = 1/60
 	draw_size: int = 12
 	draw_color: Colors = Colors.white
-	grid_color: Colors = Colors.gray
+	grid_color: Colors = Colors.black
 	window_size: Tuple[int,int] = (800, 600)
 	window_bg: Colors = Colors.black
 	caption: str = "CHIP8 Emu"
@@ -84,8 +84,7 @@ def read_input():
 
 
 def create_grid():
-	color = config.grid_color
-	bg = Colors.black if color is not Colors.black else Colors.white
+	bg = config.screen_bg
 	grid = pyg.surface.Surface(config.screen_size)
 	grid.set_colorkey(bg, pyg.RLEACCEL)
 	grid.fill(bg)

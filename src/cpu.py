@@ -113,32 +113,34 @@ class Cpu:
 	def opcode_8xy4(self):
 		v = self.v[self.opc[1]] + self.v[self.opc[2]]
 		carry, v = divmod(v, 256)
-		self.v[15] = int(bool(carry))
 		self.v[self.opc[1]] = v
+		self.v[15] = int(bool(carry))
 		self.ip += self.opc.size
 
 	def opcode_8xy5(self):
 		v = self.v[self.opc[1]] - self.v[self.opc[2]]
 		carry, v = divmod(v, 256)
-		self.v[15] = int(not carry)
 		self.v[self.opc[1]] = v
+		self.v[15] = int(not bool(carry))
 		self.ip += self.opc.size
 
 	def opcode_8xy6(self):
-		self.v[self.opc[1]] = self.v[self.opc[2]] >> 1
-		self.v[15] = self.v[self.opc[2]] & 1
+		v = self.v[self.opc[2]]
+		self.v[self.opc[1]] = v >> 1
+		self.v[15] = int(bool(v & 1))
 		self.ip += self.opc.size
 
 	def opcode_8xy7(self):
 		v = self.v[self.opc[2]] - self.v[self.opc[1]]
 		carry, v = divmod(v, 256)
-		self.v[15] = int(not carry)
 		self.v[self.opc[1]] = v
+		self.v[15] = int(not bool(carry))
 		self.ip += self.opc.size
 
 	def opcode_8xye(self):
-		self.v[self.opc[1]] = self.v[self.opc[2]] << 1
-		self.v[15] = self.v[self.opc[2]] & 128
+		v = self.v[self.opc[2]]
+		self.v[self.opc[1]] = (v << 1) % 256
+		self.v[15] = int(bool(v & 128))
 		self.ip += self.opc.size
 
 	def opcode_9xy0(self):
@@ -158,7 +160,7 @@ class Cpu:
 		self.ip += self.opc.size
 
 	def opcode_dxyn(self):
-		self.v[15] = 0
+		col = 0
 		addr = self.i
 		y = self.v[self.opc[2]] % self.screen.shape[1]
 		for _ in range(self.opc[3]):
@@ -167,11 +169,11 @@ class Cpu:
 				b = bool(int(b))
 				old = self.screen[x,y]
 				self.screen[x,y] = self.screen[x,y] ^ b
-				self.v[15] += old and not self.screen[x,y]
+				col += old and not self.screen[x,y]
 				x = (x+1) % self.screen.shape[0]
 			addr += 1
 			y = (y+1) % self.screen.shape[1]
-		self.v[15] = int(bool(self.v[15]))
+		self.v[15] = int(bool(col))
 		self.ip += self.opc.size
 
 	def opcode_ex9e(self):
@@ -318,3 +320,6 @@ class Opcode(bytes):
 			return byte >> 4
 		else:
 			return byte & 0xf
+
+	def __str__(self):
+		return self.hex()
