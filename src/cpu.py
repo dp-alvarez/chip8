@@ -98,6 +98,32 @@ class Cpu:
 		self.v[self.opc[1]] = self.v[self.opc[2]]
 		self.ip += self.opc.size
 
+	# def opcode_8xy1(self):
+	# 	self.v[self.opc[1]] = self.v[self.opc[1]] | self.v[self.opc[2]]
+	# 	self.ip += self.opc.size
+
+	def opcode_8xy2(self):
+		self.v[self.opc[1]] = self.v[self.opc[1]] & self.v[self.opc[2]]
+		self.ip += self.opc.size
+
+	# def opcode_8xy3(self):
+	# 	self.v[self.opc[1]] = self.v[self.opc[1]] ^ self.v[self.opc[2]]
+	# 	self.ip += self.opc.size
+
+	def opcode_8xy4(self):
+		v = self.v[self.opc[1]] + self.v[self.opc[2]]
+		carry, v = divmod(v, 256)
+		self.v[15] = int(bool(carry))
+		self.v[self.opc[1]] = v
+		self.ip += self.opc.size
+
+	def opcode_8xy5(self):
+		v = self.v[self.opc[1]] - self.v[self.opc[2]]
+		carry, v = divmod(v, 256)
+		self.v[15] = int(not carry)
+		self.v[self.opc[1]] = v
+		self.ip += self.opc.size
+
 	def opcode_annn(self):
 		self.i = self.opc[1:4]
 		self.ip += self.opc.size
@@ -117,11 +143,13 @@ class Cpu:
 			x = self.v[self.opc[1]] % self.screen.shape[0]
 			for b in bin(self.mem[addr])[2:].rjust(8, '0'):
 				b = bool(int(b))
-				self.v[15] = self.v[15] or (self.screen[x,y] and b)
+				old = self.screen[x,y]
 				self.screen[x,y] = self.screen[x,y] ^ b
+				self.v[15] += old and not self.screen[x,y]
 				x = (x+1) % self.screen.shape[0]
 			addr += 1
 			y = (y+1) % self.screen.shape[1]
+		self.v[15] = int(bool(self.v[15]))
 		self.ip += self.opc.size
 
 	def opcode_ex9e(self):
@@ -155,6 +183,13 @@ class Cpu:
 		self.i = (self.i + self.v[self.opc[1]]) % len(self.mem)
 		self.ip += self.opc.size
 
+	def opcode_fx33(self):
+		addr = self.i
+		for d in str(self.v[self.opc[1]]).rjust(3, '0'):
+			self.mem[addr] = int(d)
+			addr += 1
+		self.ip += self.opc.size
+
 	def opcode_fx55(self):
 		for i in range(self.opc[1]+1):
 			self.mem[self.i] = self.v[i]
@@ -179,6 +214,14 @@ Cpu.opcode_handlers = {
 	'6...': Cpu.opcode_6xnn,
 	'7...': Cpu.opcode_7xnn,
 	'8..0': Cpu.opcode_8xy0,
+	# '8..1': Cpu.opcode_8xy1,
+	'8..2': Cpu.opcode_8xy2,
+	# '8..3': Cpu.opcode_8xy3,
+	'8..4': Cpu.opcode_8xy4,
+	'8..5': Cpu.opcode_8xy5,
+	# '8..6': Cpu.opcode_8xy6,
+	# '8..7': Cpu.opcode_8xy7,
+	# '8..e': Cpu.opcode_8xye,
 	'a...': Cpu.opcode_annn,
 	'b...': Cpu.opcode_bnnn,
 	'c...': Cpu.opcode_cxnn,
@@ -190,6 +233,7 @@ Cpu.opcode_handlers = {
 	'f.18': Cpu.opcode_fx18,
 	'f.29': Cpu.opcode_fx29,
 	'f.1e': Cpu.opcode_fx1e,
+	'f.33': Cpu.opcode_fx33,
 	'f.55': Cpu.opcode_fx55,
 	'f.65': Cpu.opcode_fx65,
 }
