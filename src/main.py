@@ -21,7 +21,10 @@ class Config:
 		speed: float = 1/(60*10)
 
 	system: System = field(default_factory=System)
-	romfile: str = "roms/chip_games/pong.ch8"
+	romfile: str = "roms/chip_games/vbrix.ch8"
+	# romfile: str = "roms/chip_games/breakout.ch8"
+	# romfile: str = "roms/chip_games/brix.ch8"
+	# romfile: str = "roms/chip_games/pong.ch8"
 	# romfile: str = "roms/octo_examples/outlaw.ch8"
 	# romfile: str = "roms/octo_examples/keyboard.ch8"
 	# romfile: str = "roms/octo_examples/default/compiled.ch8"

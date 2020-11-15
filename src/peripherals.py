@@ -41,6 +41,9 @@ class Keyboard(collections.abc.Mapping):
 	def __iter__(self):
 		return iter(self.data)
 
+	def items(self):
+		return self.data.items()
+
 
 class Delay:
 	def __init__(self, freq):

@@ -106,9 +106,9 @@ class Cpu:
 		self.v[self.opc[1]] = self.v[self.opc[1]] & self.v[self.opc[2]]
 		self.ip += self.opc.size
 
-	# def opcode_8xy3(self):
-	# 	self.v[self.opc[1]] = self.v[self.opc[1]] ^ self.v[self.opc[2]]
-	# 	self.ip += self.opc.size
+	def opcode_8xy3(self):
+		self.v[self.opc[1]] = self.v[self.opc[1]] ^ self.v[self.opc[2]]
+		self.ip += self.opc.size
 
 	def opcode_8xy4(self):
 		v = self.v[self.opc[1]] + self.v[self.opc[2]]
@@ -119,6 +119,13 @@ class Cpu:
 
 	def opcode_8xy5(self):
 		v = self.v[self.opc[1]] - self.v[self.opc[2]]
+		carry, v = divmod(v, 256)
+		self.v[15] = int(not carry)
+		self.v[self.opc[1]] = v
+		self.ip += self.opc.size
+
+	def opcode_8xy7(self):
+		v = self.v[self.opc[2]] - self.v[self.opc[1]]
 		carry, v = divmod(v, 256)
 		self.v[15] = int(not carry)
 		self.v[self.opc[1]] = v
@@ -165,6 +172,13 @@ class Cpu:
 	def opcode_fx07(self):
 		self.v[self.opc[1]] = self.delay.get()
 		self.ip += self.opc.size
+
+	def opcode_fx0a(self):
+		for key,status in self.keyboard.items():
+			if status:
+				self.v[self.opc[1]] = key
+				self.ip += self.opc.size
+				break
 
 	def opcode_fx15(self):
 		self.delay.set(self.v[self.opc[1]])
@@ -216,11 +230,11 @@ Cpu.opcode_handlers = {
 	'8..0': Cpu.opcode_8xy0,
 	# '8..1': Cpu.opcode_8xy1,
 	'8..2': Cpu.opcode_8xy2,
-	# '8..3': Cpu.opcode_8xy3,
+	'8..3': Cpu.opcode_8xy3,
 	'8..4': Cpu.opcode_8xy4,
 	'8..5': Cpu.opcode_8xy5,
 	# '8..6': Cpu.opcode_8xy6,
-	# '8..7': Cpu.opcode_8xy7,
+	'8..7': Cpu.opcode_8xy7,
 	# '8..e': Cpu.opcode_8xye,
 	'a...': Cpu.opcode_annn,
 	'b...': Cpu.opcode_bnnn,
@@ -229,6 +243,7 @@ Cpu.opcode_handlers = {
 	'e.9e': Cpu.opcode_ex9e,
 	'e.a1': Cpu.opcode_exa1,
 	'f.07': Cpu.opcode_fx07,
+	'f.0a': Cpu.opcode_fx0a,
 	'f.15': Cpu.opcode_fx15,
 	'f.18': Cpu.opcode_fx18,
 	'f.29': Cpu.opcode_fx29,
