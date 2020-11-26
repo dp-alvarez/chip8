@@ -18,20 +18,24 @@ class Config:
 		screen_size: Tuple[int,int] = (64, 32)
 		nkeys: int = 16
 		delay: float = 1/60
-		speed: float = 1/(60*100)
+		speed: float = 1/(60*1000*0.1)
 
 	system: System = field(default_factory=System)
-	romfile: str = "roms/chip_modern/glitchghost.ch8"
-	busy_amount: float = 1/10
+	romfile: str = "roms/chip_modern/danm8ku.ch8"
+	busy_wait: bool = True
 	screen_size: Tuple[int,int] = (768+1, 384+1)
 	screen_pos: Tuple[int,int] = (10, 10)
-	screen_bg: Colors = Colors.black
+	overlay_pos: Tuple[int,int] = (10, 405)
+	overlay_size: Tuple[int,int] = (780, 185)
+	font: str = "Liberation Mono"
+	font_size: int = 24
 	draw_interval: float = 1/60
 	draw_size: int = 12
 	draw_color: Colors = Colors.white
 	grid_color: Colors = Colors.black
 	window_size: Tuple[int,int] = (800, 600)
 	window_bg: Colors = Colors.black
+	perf_interval: float = 0.75
 	caption: str = "CHIP8 Emu"
 	keymap: dict = field(default_factory=lambda: {
 		pyg.K_1: 0x1,
@@ -53,26 +57,24 @@ class Config:
 	})
 
 
-def draw():
-	# pylint: disable=used-before-assignment
-	global last_draw
+def update_window():
+	# pylint: disable=used-before-assignment, undefined-variable
+	global running, last_window_update, n_frames
 
-	if last_draw is not None and now-last_draw < config.draw_interval:
+	if now-last_window_update < config.draw_interval:
 		return
-	last_draw = now
+	last_window_update = now
+	n_frames += 1
 
-	pyg_screen.fill(config.screen_bg)
+	pyg_screen.fill(config.window_bg)
 	for x,y in screen:
 		if screen[x,y]:
 			pyg.draw.rect(pyg_screen, config.draw_color, ((x*config.draw_size,y*config.draw_size), (config.draw_size,config.draw_size)), 0)
 
+	pyg_window.blit(overlay, config.overlay_pos)
 	pyg_window.blit(pyg_screen, config.screen_pos)
 	pyg_window.blit(grid, config.screen_pos)
 	pyg.display.update()
-
-
-def read_input():
-	global running
 
 	pressed = pyg.key.get_pressed()
 	for key,code in config.keymap.items():
@@ -83,11 +85,28 @@ def read_input():
 			running = False
 
 
+def update_perf_counters():
+	# pylint: disable=used-before-assignment
+	global last_perf_update, overlay, n_updates, n_frames
+
+	if now-last_perf_update < config.perf_interval:
+		return
+	last_perf_update = now
+
+	ups = pyg_font.render(f'UPS: {n_updates/config.perf_interval}', False, config.draw_color)
+	fps = pyg_font.render(f'FPS: {n_frames/config.perf_interval}', False, config.draw_color)
+	overlay.fill(config.window_bg)
+	overlay.blit(ups, (0,0))
+	overlay.blit(fps, (0,config.font_size))
+
+	n_updates = 0
+	n_frames = 0
+
+
 def create_grid():
-	bg = config.screen_bg
 	grid = pyg.surface.Surface(config.screen_size)
-	grid.set_colorkey(bg, pyg.RLEACCEL)
-	grid.fill(bg)
+	grid.set_colorkey(config.window_bg, pyg.RLEACCEL)
+	grid.fill(config.window_bg)
 
 	xend = config.draw_size * config.system.screen_size[0]
 	yend = config.draw_size * config.system.screen_size[1]
@@ -102,20 +121,26 @@ def create_grid():
 
 
 def main():
-	global config, running, now, last_draw, last_update
+	global config, running, now, last_window_update, last_perf_update, last_update, n_updates, n_frames
 	config = Config()
 	running = True
+	n_updates = 0
+	n_frames = 0
 	now = 0
-	last_draw = None
-	last_update = None
+	last_window_update = 0
+	last_perf_update = 0
+	last_update = 0
 
-	global pyg_window, pyg_screen, grid
+	global pyg_window, pyg_screen, pyg_font, grid, overlay
 	pyg.display.init()
 	pyg.fastevent.init()
+	pyg.font.init()
 	pyg_window = pyg.display.set_mode(config.window_size)
 	pyg.display.set_caption(config.caption)
 	pyg_screen = pyg.surface.Surface(config.screen_size)
+	pyg_font = pyg.font.SysFont(config.font, config.font_size)
 	grid = create_grid()
+	overlay = pyg.surface.Surface(config.overlay_size)
 
 	global cpu, mem, delay, screen, keyboard, random
 	mem = Memory(config.system.ramsize)
@@ -127,18 +152,21 @@ def main():
 	with open(config.romfile, 'rb') as f:
 		f.readinto(cpu.mem[cpu.ip:])
 
-	last_update = time.perf_counter()
 	while running:
 		now = time.perf_counter()
-		tosleep = config.busy_amount * (config.system.speed - (now-last_update))
-		if tosleep >= 0:
-			time.sleep(tosleep)
+		tosleep = config.system.speed - (now-last_update)
+		if tosleep > 0:
+			if config.busy_wait:
+				pass
+			else:
+				time.sleep(tosleep)
 		else:
 			last_update = now
-			read_input()
+			n_updates += 1
 			delay.tick(now)
 			cpu.tick()
-			draw()
+			update_perf_counters()
+			update_window()
 
 	pyg.quit()
 
