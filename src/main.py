@@ -18,11 +18,10 @@ class Config:
 		screen_size: Tuple[int,int] = (64, 32)
 		nkeys: int = 16
 		delay: float = 1/60
-		speed: float = 1/(60*1000*0.1)
+		speed: float = 1/(60*1000*2)
 
 	system: System = field(default_factory=System)
 	romfile: str = "roms/chip_modern/danm8ku.ch8"
-	busy_wait: bool = True
 	screen_size: Tuple[int,int] = (768+1, 384+1)
 	screen_pos: Tuple[int,int] = (10, 10)
 	overlay_pos: Tuple[int,int] = (10, 405)
@@ -35,7 +34,7 @@ class Config:
 	grid_color: Colors = Colors.black
 	window_size: Tuple[int,int] = (800, 600)
 	window_bg: Colors = Colors.black
-	perf_interval: float = 0.75
+	perf_interval: float = 1
 	caption: str = "CHIP8 Emu"
 	keymap: dict = field(default_factory=lambda: {
 		pyg.K_1: 0x1,
@@ -66,10 +65,12 @@ def update_window():
 	last_window_update = now
 	n_frames += 1
 
-	pyg_screen.fill(config.window_bg)
-	for x,y in screen:
-		if screen[x,y]:
-			pyg.draw.rect(pyg_screen, config.draw_color, ((x*config.draw_size,y*config.draw_size), (config.draw_size,config.draw_size)), 0)
+	pyg_screen_array[:] = window_bg_mapped
+	newscreen = screen.data.repeat(config.draw_size, axis=0).repeat(config.draw_size, axis=1)
+	mask = np.zeros(pyg_screen_array.shape, dtype='bool')
+	mask[0:newscreen.shape[0], 0:newscreen.shape[1]] = newscreen
+	pyg_screen_array[mask] = draw_color_mapped
+	pyg.surfarray.blit_array(pyg_screen, pyg_screen_array)
 
 	pyg_window.blit(overlay, config.overlay_pos)
 	pyg_window.blit(pyg_screen, config.screen_pos)
@@ -131,16 +132,21 @@ def main():
 	last_perf_update = 0
 	last_update = 0
 
-	global pyg_window, pyg_screen, pyg_font, grid, overlay
+	global pyg_window, pyg_screen, pyg_screen_array, pyg_font, grid, overlay
 	pyg.display.init()
 	pyg.fastevent.init()
 	pyg.font.init()
 	pyg_window = pyg.display.set_mode(config.window_size)
 	pyg.display.set_caption(config.caption)
 	pyg_screen = pyg.surface.Surface(config.screen_size)
+	pyg_screen_array = pyg.surfarray.array2d(pyg_screen)
 	pyg_font = pyg.font.SysFont(config.font, config.font_size)
 	grid = create_grid()
 	overlay = pyg.surface.Surface(config.overlay_size)
+
+	global draw_color_mapped, window_bg_mapped
+	draw_color_mapped = pyg_screen.map_rgb(config.draw_color)
+	window_bg_mapped = pyg_screen.map_rgb(config.window_bg)
 
 	global cpu, mem, delay, screen, keyboard, random
 	mem = Memory(config.system.ramsize)
@@ -153,20 +159,16 @@ def main():
 		f.readinto(cpu.mem[cpu.ip:])
 
 	while running:
+		if config.system.speed - (time.perf_counter()-last_update) > 0:
+			continue
+
+		last_update = time.perf_counter()
+		n_updates += 1
+		delay.tick(last_update)
+		cpu.tick()
 		now = time.perf_counter()
-		tosleep = config.system.speed - (now-last_update)
-		if tosleep > 0:
-			if config.busy_wait:
-				pass
-			else:
-				time.sleep(tosleep)
-		else:
-			last_update = now
-			n_updates += 1
-			delay.tick(now)
-			cpu.tick()
-			update_perf_counters()
-			update_window()
+		update_perf_counters()
+		update_window()
 
 	pyg.quit()
 

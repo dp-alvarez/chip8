@@ -1,4 +1,5 @@
 import itertools
+import numpy as np
 import collections.abc
 
 
@@ -11,16 +12,16 @@ class Memory:
 class Screen:
 	def __init__(self, size):
 		self.shape = tuple(size[0:2])
-		self.data = [[False]*self.shape[0] for _ in range(self.shape[1])]
+		self.data = np.zeros(self.shape, dtype='bool')
 
 	def __getitem__(self, index):
-		return self.data[index[1]][index[0]]
+		return self.data[index]
 
 	def __setitem__(self, index, value):
-		self.data[index[1]][index[0]] = bool(value)
+		self.data[index] = bool(value)
 
 	def __iter__(self):
-		return itertools.product(range(self.shape[0]), range(self.shape[1]))
+		return np.ndindex(*self.shape)
 
 
 class Keyboard(collections.abc.Mapping):
