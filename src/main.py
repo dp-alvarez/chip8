@@ -3,6 +3,7 @@ import time
 import random
 from dataclasses import dataclass, field
 from typing import Tuple
+import numpy as np
 import pygame as pyg
 from colors import Colors
 from cpu import *
@@ -18,7 +19,7 @@ class Config:
 		screen_size: Tuple[int,int] = (64, 32)
 		nkeys: int = 16
 		delay: float = 1/60
-		speed: float = 1/(60*1000*2)
+		speed: float = 1/(60*1000*1000)
 
 	system: System = field(default_factory=System)
 	romfile: str = "roms/chip_modern/danm8ku.ch8"
@@ -66,7 +67,8 @@ def update_window():
 	n_frames += 1
 
 	pyg_screen_array[:] = window_bg_mapped
-	newscreen = screen.data.repeat(config.draw_size, axis=0).repeat(config.draw_size, axis=1)
+	newscreen = np.array(screen.data, dtype='bool', copy=False).reshape(screen.shape)
+	newscreen = newscreen.repeat(config.draw_size, axis=0).repeat(config.draw_size, axis=1)
 	mask = np.zeros(pyg_screen_array.shape, dtype='bool')
 	mask[0:newscreen.shape[0], 0:newscreen.shape[1]] = newscreen
 	pyg_screen_array[mask] = draw_color_mapped
