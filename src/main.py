@@ -1,10 +1,13 @@
 """@todo
-tirar coisas fixas da config (keys, regs)
-separar cpu e opcodes
-rever formatting
-testar cpu.opcode vs opcode diretamente
-desenhar ups e fps logo
-achar profiler
+better rom loading
+parsing command line
+separar em packages melhores
+separar rotinas de draw/input/perf em um arquivo?
+comentar codigo
+
+comando de wait key tem que esperar key ser apertada mesmo se ja tiver uma apertada
+
+trocar opcode pra calculo estatico dos parametros x, y, nn, nnn
 lookup via tabela
 """
 
@@ -28,7 +31,6 @@ class Config:
 		seed: int = 0
 		screen_size: tuple[int,int] = (64, 32)
 		ramsize: int = 4096
-		nkeys: int = 16
 
 	system: System = field(default_factory=System)
 	romfile: str = "roms/chip_modern/danm8ku.ch8"
@@ -191,7 +193,6 @@ def main():
 	pyg.font.init()
 	pyg_window = pyg.display.set_mode(config.window_size)
 	pyg.display.set_caption(config.caption)
-	pyg_window.fill(config.window_bg)
 	pyg_screen = pyg.surface.Surface(config.screen_size)
 	pyg_screen_array = pyg.surfarray.array2d(pyg_screen)
 	config.draw_color_mapped = pyg_screen.map_rgb(config.draw_color)
@@ -200,11 +201,16 @@ def main():
 	overlay = pyg.surface.Surface(config.overlay_size)
 	pyg_font = pyg.font.SysFont(config.font, config.font_size)
 
+	now = time.perf_counter()
+	pyg_window.fill(config.window_bg)
+	update_perf_counters()
+	ups_hist.clear()
+
 	global cpu, mem, delay, screen, keyboard, random
 	mem = Memory(config.system.ramsize)
 	delay = Delay(config.system.delay)
 	screen = Screen(config.system.screen_size)
-	keyboard = Keyboard(config.system.nkeys)
+	keyboard = Keyboard(range(len(config.keymap)))
 	random = random.Random(config.system.seed)
 	cpu = Cpu(mem, delay, screen, keyboard, random)
 
