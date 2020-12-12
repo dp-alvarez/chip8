@@ -1,41 +1,51 @@
-import itertools
+"""@todo
+tirar coisas fixas da config (keys, regs)
+separar cpu e opcodes
+rever formatting
+testar cpu.opcode vs opcode diretamente
+desenhar ups e fps logo
+achar profiler
+lookup via tabela
+"""
+
+
 import time
 import random
 from dataclasses import dataclass, field
-from typing import Tuple
-import numpy as np
 import pygame as pyg
-from colors import Colors
+import numpy as np
 from cpu import *
 from peripherals import *
+from colors import Colors
 
 
 @dataclass
 class Config:
 	@dataclass
 	class System:
-		seed: int = 0
-		ramsize: int = 4096
-		screen_size: Tuple[int,int] = (64, 32)
-		nkeys: int = 16
-		delay: float = 1/60
 		speed: float = 1/(60*1000*1000)
+		delay: float = 1/60
+		seed: int = 0
+		screen_size: tuple[int,int] = (64, 32)
+		ramsize: int = 4096
+		nkeys: int = 16
 
 	system: System = field(default_factory=System)
 	romfile: str = "roms/chip_modern/danm8ku.ch8"
-	screen_size: Tuple[int,int] = (768+1, 384+1)
-	screen_pos: Tuple[int,int] = (10, 10)
-	overlay_pos: Tuple[int,int] = (10, 405)
-	overlay_size: Tuple[int,int] = (780, 185)
-	font: str = "Liberation Mono"
-	font_size: int = 24
 	draw_interval: float = 1/60
+	perf_interval: float = 1
 	draw_size: int = 12
+	margin: int = 10
+	font_size: int = 24
+	font: str = "Liberation Mono"
+	screen_size: tuple[int,int] = (System.screen_size[0]*draw_size+1, System.screen_size[1]*draw_size+1)
+	screen_pos: tuple[int,int] = (margin, margin)
+	overlay_size: tuple[int,int] = (screen_size[0], 2*font_size)
+	overlay_pos: tuple[int,int] = (screen_pos[0], 2*margin+screen_size[1])
+	window_size: tuple[int,int] = (2*margin+max(screen_size[0],overlay_size[0]), 3*margin+screen_size[1]+overlay_size[1])
 	draw_color: Colors = Colors.white
 	grid_color: Colors = Colors.black
-	window_size: Tuple[int,int] = (800, 600)
 	window_bg: Colors = Colors.black
-	perf_interval: float = 1
 	caption: str = "CHIP8 Emu"
 	keymap: dict = field(default_factory=lambda: {
 		pyg.K_1: 0x1,
@@ -66,12 +76,12 @@ def update_window():
 	last_window_update = now
 	n_frames += 1
 
-	pyg_screen_array[:] = window_bg_mapped
+	pyg_screen_array[:] = config.window_bg_mapped
 	newscreen = np.array(screen.data, dtype='bool', copy=False).reshape(screen.shape)
 	newscreen = newscreen.repeat(config.draw_size, axis=0).repeat(config.draw_size, axis=1)
 	mask = np.zeros(pyg_screen_array.shape, dtype='bool')
 	mask[0:newscreen.shape[0], 0:newscreen.shape[1]] = newscreen
-	pyg_screen_array[mask] = draw_color_mapped
+	pyg_screen_array[mask] = config.draw_color_mapped
 	pyg.surfarray.blit_array(pyg_screen, pyg_screen_array)
 
 	pyg_window.blit(overlay, config.overlay_pos)
@@ -80,8 +90,8 @@ def update_window():
 	pyg.display.update()
 
 	pressed = pyg.key.get_pressed()
-	for key,code in config.keymap.items():
-		keyboard[code] = bool(pressed[key])
+	for key,button in config.keymap.items():
+		keyboard[button] = bool(pressed[key])
 
 	for e in pyg.fastevent.get():
 		if e.type == pyg.QUIT:
@@ -90,18 +100,27 @@ def update_window():
 
 def update_perf_counters():
 	# pylint: disable=used-before-assignment
-	global last_perf_update, overlay, n_updates, n_frames
+	global last_perf_update, n_updates, n_frames, skip_perf
 
 	if now-last_perf_update < config.perf_interval:
 		return
 	last_perf_update = now
 
-	ups = pyg_font.render(f'UPS: {n_updates/config.perf_interval}', False, config.draw_color)
-	fps = pyg_font.render(f'FPS: {n_frames/config.perf_interval}', False, config.draw_color)
+	if skip_perf:
+		n_frames = 0
+		n_updates = 0
+		skip_perf = False
+		return
+
+	ups = f'UPS: {n_updates/config.perf_interval:,.0f}'
+	fps = f'FPS: {n_frames/config.perf_interval:,}'
+	ups = pyg_font.render(ups, False, config.draw_color)
+	fps = pyg_font.render(fps, False, config.draw_color)
 	overlay.fill(config.window_bg)
 	overlay.blit(ups, (0,0))
 	overlay.blit(fps, (0,config.font_size))
 
+	ups_hist.append(n_updates)
 	n_updates = 0
 	n_frames = 0
 
@@ -123,16 +142,48 @@ def create_grid():
 	return grid
 
 
+def tick_emulator():
+	try:
+		delay.tick(now)
+		cpu.tick()
+	except EmulationError as e:
+		handle_emulation_error(e)
+
+
+def handle_emulation_error(e):
+	global cpu, running, skip_perf
+
+	print(f'{type(e).__name__}: {e}')
+	print(cpu)
+	# cmd = input()
+	cmd = "r"
+	skip_perf = True
+
+	if cmd == "q":
+		running = False
+
+	elif cmd == "c":
+		cpu.ip += cpu.opc.size
+
+	elif cmd == "r":
+		raise e
+
+	else:
+		raise e
+
+
 def main():
-	global config, running, now, last_window_update, last_perf_update, last_update, n_updates, n_frames
+	global config, running, now, last_update, last_window_update, last_perf_update, n_updates, n_frames, ups_hist, skip_perf
 	config = Config()
 	running = True
+	now = 0
 	n_updates = 0
 	n_frames = 0
-	now = 0
+	skip_perf = False
 	last_window_update = 0
 	last_perf_update = 0
 	last_update = 0
+	ups_hist = []
 
 	global pyg_window, pyg_screen, pyg_screen_array, pyg_font, grid, overlay
 	pyg.display.init()
@@ -140,15 +191,14 @@ def main():
 	pyg.font.init()
 	pyg_window = pyg.display.set_mode(config.window_size)
 	pyg.display.set_caption(config.caption)
+	pyg_window.fill(config.window_bg)
 	pyg_screen = pyg.surface.Surface(config.screen_size)
 	pyg_screen_array = pyg.surfarray.array2d(pyg_screen)
-	pyg_font = pyg.font.SysFont(config.font, config.font_size)
+	config.draw_color_mapped = pyg_screen.map_rgb(config.draw_color)
+	config.window_bg_mapped = pyg_screen.map_rgb(config.window_bg)
 	grid = create_grid()
 	overlay = pyg.surface.Surface(config.overlay_size)
-
-	global draw_color_mapped, window_bg_mapped
-	draw_color_mapped = pyg_screen.map_rgb(config.draw_color)
-	window_bg_mapped = pyg_screen.map_rgb(config.window_bg)
+	pyg_font = pyg.font.SysFont(config.font, config.font_size)
 
 	global cpu, mem, delay, screen, keyboard, random
 	mem = Memory(config.system.ramsize)
@@ -157,22 +207,26 @@ def main():
 	keyboard = Keyboard(config.system.nkeys)
 	random = random.Random(config.system.seed)
 	cpu = Cpu(mem, delay, screen, keyboard, random)
+
 	with open(config.romfile, 'rb') as f:
 		f.readinto(cpu.mem[cpu.ip:])
 
-	while running:
-		if config.system.speed - (time.perf_counter()-last_update) > 0:
-			continue
+	last_perf_update = time.perf_counter()
+	try:
+		while running:
+			while now-last_update < config.system.speed:
+				now = time.perf_counter()
+			last_update = now
+			n_updates += 1
+			tick_emulator()
+			update_perf_counters()
+			update_window()
 
-		last_update = time.perf_counter()
-		n_updates += 1
-		delay.tick(last_update)
-		cpu.tick()
-		now = time.perf_counter()
-		update_perf_counters()
-		update_window()
-
-	pyg.quit()
+	finally:
+		if ups_hist:
+			avg_ups = sum(ups_hist)/(len(ups_hist)*config.perf_interval)
+			print(f"Avg UPS: {avg_ups:,.0f}")
+		pyg.quit()
 
 
 if __name__ == "__main__":

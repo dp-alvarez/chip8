@@ -26,6 +26,7 @@ class Screen:
 
 
 class Keyboard(collections.abc.Mapping):
+	# @todo range na chamada
 	def __init__(self, nkeys):
 		self.data = {key:False for key in range(nkeys)}
 
