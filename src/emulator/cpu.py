@@ -1,9 +1,13 @@
-import opcodes
 import re
+from .exceptions import *
+from .opcode import Opcode
+from .opcode_handlers import opcode_handlers
+from .char_data import char_data
 
 
 class Cpu:
-	# pylint: disable=no-member
+	char_data = char_data
+	opcode_handlers = opcode_handlers
 
 	def __init__(self, mem, delay, screen, keyboard, random):
 		self.mem = mem
@@ -38,13 +42,13 @@ class Cpu:
 		for regex in self.opcode_handlers:
 			if regex.fullmatch(opcode_str):
 				return self.opcode_handlers[regex]
-		raise EmulationError(f"No handler for opcode: {opcode_str}")
+		raise InvalidOpcodeError(f"No handler for opcode: {opcode_str}")
 
 	def tick(self):
 		try:
 			self.opc = Opcode(self.mem[self.ip:])
-			opcode = self.opcode_lookup(self.opc.hex())
-			opcode()
+			opcode_handler = self.opcode_lookup(self.opc.hex())
+			opcode_handler()
 		except EmulationError:
 			raise
 		except Exception as e:
@@ -63,39 +67,3 @@ class Cpu:
 		ret += f"Delay: {self.delay}\n"
 		ret += f"Stack: {str(self.stack)}\n"
 		return ret
-
-
-opcodes.attach()
-
-
-class Opcode(bytes):
-	__slots__ = tuple()
-	size = 2
-
-	def __new__(cls, val):
-		return super().__new__(cls, val[0:cls.size])
-
-	def __getitem__(self, index):
-		if isinstance(index, slice):
-			start, stop, _ = index.indices(2*self.size)
-			ret = 0
-			for i,index in enumerate(reversed(range(start, stop))):
-				ret += self.nibble(index) << (4*i)
-			return ret
-		else:
-			return self.nibble(index)
-
-	def nibble(self, index):
-		byte, index = divmod(index, 2)
-		byte = super().__getitem__(byte)
-		if index == 0:
-			return byte >> 4
-		else:
-			return byte & 0xf
-
-	def __str__(self):
-		return self.hex()
-
-
-class EmulationError(Exception):
-	pass

@@ -1,13 +1,13 @@
 """@todo
 better rom loading
 parsing command line
-separar em packages melhores
-separar rotinas de draw/input/perf em um arquivo?
+separar main em arquivos ou package
 comentar codigo
 
 comando de wait key tem que esperar key ser apertada mesmo se ja tiver uma apertada
 
 trocar opcode pra calculo estatico dos parametros x, y, nn, nnn
+implementar som
 lookup via tabela
 """
 
@@ -17,8 +17,7 @@ import random
 from dataclasses import dataclass, field
 import pygame as pyg
 import numpy as np
-from cpu import *
-from peripherals import *
+from emulator import *
 from colors import Colors
 
 
