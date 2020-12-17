@@ -1,0 +1,2 @@
+class WindowClose(BaseException):
+	pass

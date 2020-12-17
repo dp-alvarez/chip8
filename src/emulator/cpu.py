@@ -1,13 +1,12 @@
 import re
 from .exceptions import *
 from .opcode import Opcode
-from .opcode_handlers import opcode_handlers
-from .char_data import char_data
+from . import opcode_handlers, char_data
 
 
 class Cpu:
-	char_data = char_data
-	opcode_handlers = opcode_handlers
+	char_data = char_data.char_data
+	opcode_handlers = opcode_handlers.opcode_handlers
 
 	def __init__(self, mem, delay, screen, keyboard, random):
 		self.mem = mem
