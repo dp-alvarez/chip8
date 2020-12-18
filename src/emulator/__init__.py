@@ -1,6 +1,7 @@
 from .cpu import Cpu
 from .peripherals import Memory, Screen, Keyboard, Delay
-from .exceptions import *
+from .exceptions import EmulationError, InvalidOpcodeError
+
 
 __all__ = [
 	'Cpu',

@@ -1,9 +1,9 @@
 import pygame as pyg
-from . import gui
-from .exceptions import *
+from .. import gui
+from ..exceptions import WindowClose
 
 
-def update_input():
+def update():
 	pressed = pyg.key.get_pressed()
 	for key,button in gui.config.keymap.items():
 		gui.keyboard[button] = bool(pressed[key])

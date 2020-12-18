@@ -85,7 +85,7 @@ def handle_emulation_error(e):
 	print(cpu)
 	# cmd = input()
 	cmd = "r"
-	overlay.skip_perf = True
+	perf.skip = True
 
 	if cmd == "q":
 		raise WindowClose
@@ -117,23 +117,23 @@ def main():
 	with open(config.romfile, 'rb') as f:
 		f.readinto(cpu.mem[cpu.ip:])
 
-	gui_init(config, screen, keyboard)
+	init(config, screen, keyboard)
 
 	try:
 		while True:
 			while now-last_update < config.system.speed:
 				now = time.perf_counter()
 			last_update = now
-			overlay.n_updates += 1
+			perf.n_updates += 1
 			tick_emulator()
-			overlay.update_overlay(now)
-			update_window(now)
+			perf.update(now)
+			window.update(now)
 
 	except WindowClose:
 		pass
 
 	finally:
-		print(f"Avg UPS: {overlay.get_average():,.0f}")
+		print(f"Avg UPS: {perf.get_average():,.0f}")
 		gui_quit()
 
 

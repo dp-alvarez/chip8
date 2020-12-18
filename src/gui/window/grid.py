@@ -1,5 +1,5 @@
 import pygame as pyg
-from . import gui
+from .. import gui
 
 
 def create_grid():

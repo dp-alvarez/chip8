@@ -1,17 +1,16 @@
 import pygame as pyg
-from . import window, grid, overlay, input
+from . import window
+from . import perf
 
 
-def gui_init(_config, _screen, _keyboard):
+def init(_config, _screen, _keyboard):
 	global config, screen, keyboard
 	config = _config
 	screen = _screen
 	keyboard = _keyboard
 
-	grid.init()
-	overlay.init()
+	perf.init()
 	window.init()
-	input.init()
 
 
 def gui_quit():

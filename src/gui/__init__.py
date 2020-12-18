@@ -1,14 +1,12 @@
-from .gui import gui_init, gui_quit
-from .window import update_window
-from . import overlay
-from .exceptions import *
+from .gui import init, gui_quit
+from . import window, perf
 from .colors import Colors
+from .exceptions import WindowClose
 
 
 __all__ = [
-	'gui_init', 'gui_quit',
-	'update_window',
-	'overlay',
+	'init', 'gui_quit',
+	'window', 'perf',
 	'Colors',
 	'WindowClose'
 ]
