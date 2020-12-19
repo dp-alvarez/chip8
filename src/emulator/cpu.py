@@ -18,6 +18,7 @@ class Cpu:
 		self.ip = 0x200
 		self.v = [0] * 16
 		self.i = 0
+		self.keyboard_old = None
 		self.init_opcode_handlers()
 		self.init_chars()
 

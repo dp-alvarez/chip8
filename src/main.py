@@ -3,7 +3,6 @@ better rom loading
 parsing command line
 comentar codigo
 
-comando de wait key tem que esperar key ser apertada mesmo se ja tiver uma apertada
 talvez criar sub-module pra cpu e opcodes
 implementar som
 usar o cache do functools da um ganho de performance de mais de 2x

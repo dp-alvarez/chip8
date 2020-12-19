@@ -21,3 +21,8 @@ class Keyboard(collections.abc.Mapping):
 
 	def items(self):
 		return self.data.items()
+
+	def copy(self):
+		ret = type(self)(self.data.keys())
+		ret.data = self.data.copy()
+		return ret

@@ -135,11 +135,17 @@ def opcode_fx07(self):
 	self.ip += self.opc.size
 
 def opcode_fx0a(self):
-	for key,status in self.keyboard.items():
-		if status:
-			self.v[self.opc[1]] = key
-			self.ip += self.opc.size
-			break
+	if not self.keyboard_old:
+		self.keyboard_old = self.keyboard.copy()
+	else:
+		for key in self.keyboard:
+			if self.keyboard[key]:
+				self.keyboard_old[key] = True
+			elif self.keyboard_old[key]:
+				self.v[self.opc[1]] = key
+				self.keyboard_old = None
+				self.ip += self.opc.size
+				return
 
 def opcode_fx15(self):
 	self.delay.set(self.v[self.opc[1]])
