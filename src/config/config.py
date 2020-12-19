@@ -7,7 +7,7 @@ from .system import SystemConfig
 @dataclass
 class Config:
 	system: SystemConfig = field(default_factory=SystemConfig)
-	window: WindowConfig = field(default_factory=WindowConfig)
+	window: WindowConfig = None
 	romfile: str = "roms/chip_modern/danm8ku.ch8"
 	perf_interval: float = 1
 	keymap: dict = field(default_factory=lambda: {
@@ -28,3 +28,7 @@ class Config:
 		pyg.K_c: 0xb,
 		pyg.K_v: 0xf
 	})
+
+	def __post_init__(self):
+		if not self.window:
+			self.window = WindowConfig(sysconfig=self.system)

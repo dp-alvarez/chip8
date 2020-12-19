@@ -4,7 +4,6 @@ parsing command line
 comentar codigo
 
 comando de wait key tem que esperar key ser apertada mesmo se ja tiver uma apertada
-fazer config calcular os parametros com base no seu construtor e nao parametros default da classe
 talvez criar sub-module pra cpu e opcodes
 implementar som
 usar o cache do functools da um ganho de performance de mais de 2x
@@ -51,11 +50,11 @@ def handle_emulation_error(e):
 
 def main():
 	global config, now
-	config = Config(
-		system = SystemConfig(
-			speed = 1/(1000000*100)
-		)
+	sysconfig = SystemConfig(
+		speed = 1/(1000000*100)
 	)
+	winconfig = WindowConfig(sysconfig=sysconfig)
+	config = Config(system=sysconfig, window=winconfig)
 	now = 0
 	last_update = 0
 
