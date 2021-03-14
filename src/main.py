@@ -1,19 +1,6 @@
-"""@todo
-better rom loading
-parsing command line
-comentar codigo
-
-talvez criar sub-module pra cpu e opcodes
-implementar som
-usar o cache do functools da um ganho de performance de mais de 2x
-trocar opcode pra calculo estatico dos parametros x, y, nn, nnn
-lookup via tabela
-criar scheduler, tem um na stdlib
-"""
-
-
 import time
 import random
+import sys
 from config import *
 from emulator import *
 from gui import *
@@ -30,8 +17,7 @@ def tick_emulator():
 def handle_emulation_error(e):
 	print(f'{type(e).__name__}: {e}')
 	print(cpu)
-	# cmd = input()
-	cmd = "r"
+	cmd = input()
 	perf.skip = True
 
 	if cmd == "q":
@@ -47,13 +33,11 @@ def handle_emulation_error(e):
 		raise e
 
 
-def main():
+def main(romfile, speed):
 	global config, now
-	sysconfig = SystemConfig(
-		speed = 1/(1000000*100)
-	)
+	sysconfig = SystemConfig(speed=speed)
 	winconfig = WindowConfig(sysconfig=sysconfig)
-	config = Config(system=sysconfig, window=winconfig)
+	config = Config(system=sysconfig, window=winconfig, romfile=romfile)
 	now = 0
 	last_update = 0
 
@@ -81,12 +65,20 @@ def main():
 			window.update(now)
 
 	except WindowClose:
-		pass
+		print(f"Avg UPS: {perf.get_average():,.0f}")
 
 	finally:
-		print(f"Avg UPS: {perf.get_average():,.0f}")
 		gui_quit()
 
 
 if __name__ == "__main__":
-	main()
+	if len(sys.argv) < 2:
+		print("Usage: chip8_emu <rom file> <emulation speed>")
+		sys.exit(1)
+	else:
+		romfile = sys.argv[1]
+		speed = 1/(1000000)
+		if len(sys.argv) >= 3:
+			speed = 1/int(sys.argv[2])
+
+	main(romfile, speed)
